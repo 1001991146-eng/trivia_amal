@@ -28,20 +28,42 @@ import java.util.Locale;
 
 public class UserSettingsActivity extends AppCompatActivity {
 
-    public TextToSpeech textToSpeech;
+    // language properties
     public Locale locale;
     public int lang = 0;
     public int speech = 0;
 
-
-
-    public HelperDB helperDB;
-    public SQLiteDatabase db;
-
+    public TextToSpeech textToSpeech;
     public ExtendedFloatingActionButton fabDeleteEdit, fabOkEdit;
     public TextInputEditText etFirstEdit,etLastEdit, etEmailEdit,etPhoneEdit,etPasswordEdit;
     String email;
 
+    // dbs properties
+    public HelperDB helperDB;
+    public SQLiteDatabase db;
+    /**
+     * init
+     * הפעולה מטרתה להתחל את כל קישור לכל הרכיבים על מסך
+     * ולייצר קשר למסד הנתונים על ידי יצירת עצם מסוג
+     * HelperDb
+     */
+
+    public void init()
+    {
+        etFirstEdit=findViewById(R.id.etFirstEdit);
+        etLastEdit=findViewById(R.id.etLastEdit);
+        etEmailEdit=findViewById(R.id.etEmailEdit);
+        etPhoneEdit=findViewById(R.id.etPhoneEdit);
+        etPasswordEdit=findViewById(R.id.etPasswordEdit);
+        fabOkEdit=findViewById(R.id.fabOkEdit);
+        fabDeleteEdit=findViewById(R.id.fabDeleteEdit);
+        email="";
+        helperDB=new HelperDB(this);
+    }
+    /**
+     * initLanguage
+     * הפעולה מטרתה להתחל את השפה של האפליקציה לצורך TTS
+     * */
     public  void initLanguage(Context context, String language) {
         locale = new Locale(language);
         Locale.setDefault(locale);
@@ -50,6 +72,10 @@ public class UserSettingsActivity extends AppCompatActivity {
         configuration.setLocale(locale);
         resources.updateConfiguration(configuration, resources.getDisplayMetrics());
     }
+    /**
+     * read
+     * הפעולה מטרתה להקריא הודעה למשתמש באמצעות TTS
+     * */
 
     public void read(String message)
     {
@@ -64,20 +90,10 @@ public class UserSettingsActivity extends AppCompatActivity {
         });
 
     }
-
-
-    public void init()
-    {
-        etFirstEdit=findViewById(R.id.etFirstEdit);
-        etLastEdit=findViewById(R.id.etLastEdit);
-        etEmailEdit=findViewById(R.id.etEmailEdit);
-        etPhoneEdit=findViewById(R.id.etPhoneEdit);
-        etPasswordEdit=findViewById(R.id.etPasswordEdit);
-        fabOkEdit=findViewById(R.id.fabOkEdit);
-        fabDeleteEdit=findViewById(R.id.fabDeleteEdit);
-        email="";
-        helperDB=new HelperDB(this);
-    }
+    /**
+     * loadCurrentData
+     * הפעולה שמטרתה להביא ממסד הנצונים את פרטי המשתמש המחובר להצגה במסך עריכת פרטי משתמש
+     * */
     public void loadCurrentData()
     {
         SQLiteDatabase db = helperDB.getReadableDatabase();
@@ -126,6 +142,10 @@ public class UserSettingsActivity extends AppCompatActivity {
             db.close();
         }
     }
+    /**
+     * verifyData
+     * הפעולה שמטרתה לבדוק שפרטי הנתונים שנערכו תקינים
+     * */
     public boolean verifyData()
     {
         String first=etFirstEdit.getText().toString();
@@ -166,6 +186,10 @@ public class UserSettingsActivity extends AppCompatActivity {
         }
         return  true;
     }
+    /**
+     * updateData
+     * הפעולה שמטרתה לעדכן את מסד הנתונים עם פרטי המשתמש המעודכן
+     * */
     public void updateData()
     {
         SQLiteDatabase db=helperDB.getWritableDatabase();
@@ -178,7 +202,6 @@ public class UserSettingsActivity extends AppCompatActivity {
         cv.put(helperDB.LAST_NAME_COL,etLastEdit.getText().toString());
         cv.put(helperDB.PHONE_COL,etPhoneEdit.getText().toString());
         cv.put(helperDB.PASSWORD_COL,etPasswordEdit.getText().toString());
-
 
         int rowsChanged= db.update(helperDB.USERS_TABLE, cv, infield,oldData);
         if (rowsChanged>0)
@@ -199,6 +222,10 @@ public class UserSettingsActivity extends AppCompatActivity {
             adbCorrectResponse.create().show();
         }
     }
+    /**
+     * deleteUser
+     * הפעולה שמטרתה למחוק משתמש מחובר
+     * */
     public void deleteUser()
     {
         db=helperDB.getWritableDatabase();
@@ -212,6 +239,10 @@ public class UserSettingsActivity extends AppCompatActivity {
         db.close();
 
     }
+    /**
+     * onCreate
+     *      פעולה שמאתחלת את אקטיביטי עריכת נתוני משתמש
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -229,8 +260,10 @@ public class UserSettingsActivity extends AppCompatActivity {
         fabOkEdit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                // verify correct data
                 if (verifyData())
                 {
+                    // save data to dbs
                     updateData();
                 }
 
@@ -251,8 +284,9 @@ public class UserSettingsActivity extends AppCompatActivity {
                 adbCorrectResponse.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
+                        // delete user
                         deleteUser();
-
+                        // back to login
                         Intent intent=new Intent(UserSettingsActivity.this, LoginActivity.class);
                         startActivity(intent);
                     }

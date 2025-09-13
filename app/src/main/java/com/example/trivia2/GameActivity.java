@@ -30,32 +30,38 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 public class GameActivity extends AppCompatActivity {
-
+    // properties stop game when call arrives
     public IncomingCallReceiver incomingCallReceiver;
     public IntentFilter intentFilterCall;
-
+    // properties dbs
     public HelperDB helperDB;
     public SQLiteDatabase db;
+    // properties current question
+    public Question current;
+    public int points;
+    public int rounds=0;
+    public final int MAX_ROUNDS=10;
+    // properties timer
+    public static boolean play;
+    public static boolean isTimerPaused = false; // Track if the timer is paused
+    private CountDownTimer countDownTimer;
+    public long missing;
+    public final  long MAX_TIME=11000;
 
     public TextView tvQuestion;
     public TextView tvAnswer1, tvAnswer2, tvAnswer3, tvAnswer4, tvTimer;
     public FloatingActionButton fab1, fab2, fab3, fab4;
     public ProgressBar pbQuestion;
     public TextView tvProgress;
-
-    public Question current;
-    public int points;
-    public int rounds=0;
-    public final int MAX_ROUNDS=10;
     public String email;
-
-    public static boolean play;
-
-    public static boolean isTimerPaused = false; // Track if the timer is paused
-    private CountDownTimer countDownTimer;
-    public long missing;
-    public final  long MAX_TIME=11000;
-
+    /**
+     * init
+     *      פעולה שמאתחלת את אקטיביטי הראשי של המשחק
+     * עדכון קישורים לרכיבי המסך
+     * קישור למסד נתונים
+     * התחלה מוזיקה
+     * איתחול ניקוד ופרטי מחובר
+     */
     public void init()
     {
         tvTimer=findViewById(R.id.tvTimer);
@@ -70,14 +76,18 @@ public class GameActivity extends AppCompatActivity {
         fab4=findViewById(R.id.fab4);
         pbQuestion=findViewById(R.id.pbQuestion);
         tvProgress=findViewById(R.id.tvProgress);
+
         points=0;
         email="";
         helperDB=new HelperDB(this);
         Intent it= new Intent(GameActivity.this, MusicService.class);
         startService(it);
-
     }
-
+    /**
+     * getRandomQuestion
+     * בחירת השאלה הבאה והצגתה למשתמש
+     * במידה ונגמרו השאלות מחזיר שקר
+     */
     public boolean getRandomQuestion()
     {
 
@@ -107,6 +117,10 @@ public class GameActivity extends AppCompatActivity {
             return  false;
         }
     }
+    /**
+     * playedBefore
+     * בדיקה האם השחקן הנוכחי שיחק בעבר ושמור ניקוד קודם במסד נתונים
+     */
     public boolean playedBefore()
     {
         SQLiteDatabase db = helperDB.getReadableDatabase();
@@ -122,6 +136,10 @@ public class GameActivity extends AppCompatActivity {
         }
         return true;
     }
+    /**
+     * updateScore
+     * עדכון ניקוד המשתמש בנוכחי במסד נתונים
+     */
     public void updateScore()
     {
         SQLiteDatabase db=helperDB.getWritableDatabase();
@@ -139,7 +157,7 @@ public class GameActivity extends AppCompatActivity {
         int numPointsDB=Integer.parseInt(pointsDB);
         if (points>numPointsDB)
         {
-
+            //update only is higher than previous score
             String [] oldData={email};
             String infield=helperDB.USER_EMAIL_COL+"=?";
             ContentValues cv=new ContentValues();
@@ -150,8 +168,28 @@ public class GameActivity extends AppCompatActivity {
                 Log.d("MARIELA","Updated score");
             }
         }
-
     }
+    /*
+    * insertScoreToDBS
+     *  פעולה שמטרתה להכניס ניקוד המשחק במסד נתונים
+     * במידה וזו פעם ראשונה שהשחקן משחק
+     *  */
+    public void insertScoreToDBS()
+    {
+        TopScores top=new TopScores(email, Integer.toString(points));
+
+        ContentValues cv= new ContentValues();
+        cv.put(helperDB.USER_EMAIL_COL,top.getEmail());
+        cv.put(helperDB.POINTS_COL,top.getMaxScore());
+        db=helperDB.getWritableDatabase();
+        db.insert(helperDB.TOP_SCORES_TABLE,null,cv);
+        db.close();
+    }
+    /**
+     * goToNext
+     * פעולה שמטרתה להתקדם לשאלה באה או לסיים את המשחק
+     * אם הסתיים המשחק,  הפסקת טיימר, עדכון ניקוד משתמש במסד נתונים
+     */
     public void goToNext()
     {
         if (!getRandomQuestion())
@@ -171,6 +209,11 @@ public class GameActivity extends AppCompatActivity {
             startActivity(intent);
         }
     }
+    /**
+     * notifySuccess
+     *  פעולה שמטרתה לעדכן את המשתמש בהצלחה בשאלה
+     *  מעבר לשאלה הבאה
+     *  */
     public void notifySuccess()
     {
         AlertDialog.Builder adbCorrectResponse;
@@ -187,9 +230,12 @@ public class GameActivity extends AppCompatActivity {
             }
         });
         adbCorrectResponse.create().show();
-
     }
-
+    /**
+     * notifyFailure
+     *  פעולה שמטרתה לעדכן את המשתמש בכשלון בשאלה
+     *  מעבר לשאלה הבאה
+     *  */
     public void notifyFailure()
     {
         AlertDialog.Builder adbCorrectResponse;
@@ -206,6 +252,11 @@ public class GameActivity extends AppCompatActivity {
         });
         adbCorrectResponse.create().show();
     }
+    /**
+     * SelectAnswer
+     *  פעולה שמטרתה לטפל בבחירת השחקן
+     * בדיקת נכונות התשובה ועדכון ניקוד
+     *  */
     public void SelectAnswer (View v) {
         stopTimer();
 
@@ -255,6 +306,10 @@ public class GameActivity extends AppCompatActivity {
 
         }
     }
+    /**
+     * onCreateOptionsMenu
+     *  פעולה שמטרתה להגדיר את התפריטים המוצגים במשחק
+     *  */
     @SuppressLint("RestrictedApi")
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.mainmenu,menu);
@@ -263,11 +318,13 @@ public class GameActivity extends AppCompatActivity {
             MenuBuilder mb= (MenuBuilder) menu;
             mb.setOptionalIconsVisible(true);
         }
-
-
         //   menu.add(0, 100, 0 , "Manual");
         return super.onCreateOptionsMenu(menu);
     }
+    /**
+     * onOptionsItemSelected
+     *  פעולה שמטרתה לקבוע מה יתרחש כאשר תפריטים ייבחרו
+     *  */
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int itemId=item.getItemId();
         if (itemId==R.id.mnuSettings)
@@ -313,18 +370,10 @@ public class GameActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-
-    public void insertScoreToDBS()
-    {
-        TopScores top=new TopScores(email, Integer.toString(points));
-
-        ContentValues cv= new ContentValues();
-        cv.put(helperDB.USER_EMAIL_COL,top.getEmail());
-        cv.put(helperDB.POINTS_COL,top.getMaxScore());
-        db=helperDB.getWritableDatabase();
-        db.insert(helperDB.TOP_SCORES_TABLE,null,cv);
-        db.close();
-    }
+    /**
+     * startTimer
+     *  פעולה שמטרתה לאתחל טיימר למשחק
+     *  */
     private void startTimer() {
         if (countDownTimer != null) {
             countDownTimer.cancel(); // Cancel the previous timer if it exists
@@ -342,8 +391,6 @@ public class GameActivity extends AppCompatActivity {
                     tvTimer.setText(Long.toString(missing / 1000));
                 }
             }
-
-
             @Override
             public void onFinish() {
                 if (!isTimerPaused) {
@@ -361,24 +408,37 @@ public class GameActivity extends AppCompatActivity {
             }
         }.start();
     }
-
+    /**
+     * stopTimer
+     *  פעולה שמטרתה להפסיק טיימר למשחק
+     *  */
     private void stopTimer() {
         if (countDownTimer != null) {
             countDownTimer.cancel();
             countDownTimer = null; // Set the timer instance to null
         }
     }
+    /**
+     * pauseTimer
+     *   פעולה שמטרתה להפסיק זמנית טיימר למשחק
+     *  */
     // Call this method whenever you want to pause the timer (e.g., before opening a dialog)
     private void pauseTimer() {
         isTimerPaused = true;
     }
-
-
+    /**
+     * resumeTimer
+     *   פעולה שמטרתה לחזיר  טיימר למשחק
+     *  */
     // Call this method to resume the timer after pausing
     private void resumeTimer() {
         isTimerPaused = false;
         startTimer(); // Start or resume the timer
     }
+    /**
+     * onCreate
+     *      פעולה שמאתחלת את אקטיביטי המשחק
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -408,13 +468,12 @@ public class GameActivity extends AppCompatActivity {
         {
             Log.d("MARIELA","No permission for recieving call");
         }
-
-
-
         getRandomQuestion();
-
-
     }
+    /**
+     * onDestroy
+     *      פעולה שדואגת להפסיק לקבל הודעות על שיחות נכנסות בסגירה של המשחק
+     */
     @Override
     protected void onDestroy() {
         super.onDestroy();

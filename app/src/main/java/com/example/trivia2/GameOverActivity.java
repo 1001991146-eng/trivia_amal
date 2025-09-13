@@ -1,5 +1,6 @@
 package com.example.trivia2;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -13,11 +14,17 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 public class GameOverActivity extends AppCompatActivity {
-
+    //properties dbs
     public HelperDB helperDB;
     public SQLiteDatabase db;
 
     public TextView tvPointsGO, tvUserScore, tvAllScores;
+    /**
+     * init
+     *      פעולה שמאתחלת את אקטיביטי  הכי טובים
+     * עדכון קישורים לרכיבי המסך
+     * קישור למסד נתונים
+     */
     public void init()
     {
         tvPointsGO=findViewById(R.id.tvPointsGO);
@@ -25,6 +32,10 @@ public class GameOverActivity extends AppCompatActivity {
         tvAllScores=findViewById(R.id.tvAllScores);
         helperDB=new HelperDB(this);
     }
+    /**
+     * showAllTopScores
+     *      פעולה שמביאה מהמסד נתונים את פרטי הכי טובים ומציגה אותם על המשך
+     */
     public void showAllTopScores()
     {
         String[] projection = {
@@ -67,6 +78,11 @@ public class GameOverActivity extends AppCompatActivity {
         db.close();
         tvAllScores.setText(all);
     }
+    /**
+     * onCreate
+     *      פעולה שמאתחלת את אקטיביטי ניקוד הכי טובים
+     */
+    @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

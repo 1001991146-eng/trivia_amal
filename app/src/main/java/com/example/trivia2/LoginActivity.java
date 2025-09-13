@@ -24,8 +24,12 @@ public class LoginActivity extends AppCompatActivity {
     public ExtendedFloatingActionButton fabRegister, fabLogin;
     public CheckBox cbPersonal;
     public TextInputEditText etEmail,etPassword;
-
-
+    /**
+     * init
+     * הפעולה מטרתה להתחל את כל קישור לכל הרכיבים על מסך
+     * ולייצר קשר למסד הנתונים על ידי יצירת עצם מסוג
+     * HelperDb
+     */
     public void init()
     {
         fabRegister=findViewById(R.id.fabRegister);
@@ -35,6 +39,10 @@ public class LoginActivity extends AppCompatActivity {
         etPassword=findViewById(R.id.etPassword);
         helperDB=new HelperDB(this);
     }
+    /**
+     * verifyUserExist
+     * הפעולה פונה למסד נתונים ובודקת האם המשתמש קיים והסיסמה שלו תקינה
+     */
     public boolean verifyUserExist()
     {
         SQLiteDatabase db = helperDB.getReadableDatabase();
@@ -67,6 +75,10 @@ public class LoginActivity extends AppCompatActivity {
         etPassword.setError("Wrong password");
         return false;
     }
+    /**
+     * loadLastLoggedInUserData
+     * הפעולה קוראת מקובץ פנימי בסלולרי את פרטי המחובר האחרון שזוהה
+     */
     public void loadLastLoggedInUserData()
     {
         SharedPreferences sp=
@@ -75,9 +87,11 @@ public class LoginActivity extends AppCompatActivity {
         String password = sp.getString("password", ""); // Provide a default value in case the key is not found
         etEmail.setText(email);
         etPassword.setText(password);
-
-
     }
+    /**
+     * saveLogedInUserInSharedPreferences
+     * הפעולה שמורת  לקובץ פנימי בסלולרי את פרטי המחובר הנוכחי
+     */
     public void saveLogedInUserInSharedPreferences()
     {
         SharedPreferences sp=
@@ -88,6 +102,10 @@ public class LoginActivity extends AppCompatActivity {
         editor.commit();
 
     }
+    /**
+     * onCreate
+     *      פעולה שמאתחלת את אקטיביטי התחברות
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

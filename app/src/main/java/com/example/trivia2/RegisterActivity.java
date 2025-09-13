@@ -21,6 +21,12 @@ public class RegisterActivity extends AppCompatActivity {
 
     public ExtendedFloatingActionButton fabCancelReg, fabOKReg;
     public TextInputEditText etEmailReg,etLastReg,etFirstReg,etPhone,etPasswordReg;
+    /**
+     * init
+     * הפעולה מטרתה להתחל את כל קישור לכל הרכיבים על מסך
+     * ולייצר קשר למסד הנתונים על ידי יצירת עצם מסוג
+     * HelperDb
+     */
     public void init()
     {
         fabCancelReg=findViewById(R.id.fabCancelReg);
@@ -32,7 +38,10 @@ public class RegisterActivity extends AppCompatActivity {
         etPasswordReg=findViewById(R.id.etPasswordReg);
         helperDB=new HelperDB(this);
     }
-
+    /**
+     * verifyData
+     * הפעולה בודקת אם פרטי ההרשמה תקינים
+     */
     public boolean verifyData()
     {
         String first=etFirstReg.getText().toString();
@@ -84,6 +93,10 @@ public class RegisterActivity extends AppCompatActivity {
         }
         return  true;
     }
+    /**
+     * insertNewUserToDBS
+     * הפעולה שומרת את פרטי ההרשמה של המשתמש במסד נתונים
+     */
     public void insertNewUserToDBS()
     {
 
@@ -104,7 +117,10 @@ public class RegisterActivity extends AppCompatActivity {
         db.insert(helperDB.USERS_TABLE,null,cv);
         db.close();
     }
-
+    /**
+     * onCreate
+     *      פעולה שמאתחלת את אקטיביטי ההרשמה
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -128,6 +144,7 @@ public class RegisterActivity extends AppCompatActivity {
         fabCancelReg.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
+                    // go back to login
                     Intent intent=new Intent( RegisterActivity.this, LoginActivity.class);
                     startActivity(intent);
                 }
