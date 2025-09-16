@@ -44,7 +44,7 @@ public class GameActivity extends AppCompatActivity {
     public Question current;
     public int points;
     public int rounds=0;
-    public final int MAX_ROUNDS=10;
+    public final int MAX_ROUNDS=20;
     // properties timer
     public static boolean play;
     public static boolean isTimerPaused = false; // Track if the timer is paused

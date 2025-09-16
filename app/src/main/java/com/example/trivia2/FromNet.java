@@ -27,7 +27,7 @@ import java.util.concurrent.ExecutionException;
 public class FromNet extends AsyncTask<String , Void, String> {
     public Handler verifyQuestions;
     public final int MSG_QUESTIONS_LOADED=1;
-
+    int NUM_QUESTIONS=20;
     public String all="";
 
     public FromNet(Handler verifyQuestions)
@@ -174,7 +174,8 @@ public class FromNet extends AsyncTask<String , Void, String> {
         GenerativeModelFutures model = GenerativeModelFutures.from(gm);
 
         // --- בניית הפרומפט (ההוראה ל-Gemini) ---
-        String prompt = "Generate 10 trivia questions in JSON format. Each question should have a 'question' string, an 'answers' array of 4 strings, and a 'correct_answer' integer (0-3 indicating the index of the correct answer). Ensure the output is a valid JSON array of questions. Example: [{\"question\": \"What is 2+2?\", \"answers\": [\"3\", \"4\", \"5\", \"6\"], \"correct_answer\": 1}]";
+
+        String prompt = "Generate "+Integer.toString(NUM_QUESTIONS) +" trivia questions in JSON format. Each question should have a 'question' string, an 'answers' array of 4 strings, and a 'correct_answer' integer (0-3 indicating the index of the correct answer). Ensure the output is a valid JSON array of questions. Example: [{\"question\": \"What is 2+2?\", \"answers\": [\"3\", \"4\", \"5\", \"6\"], \"correct_answer\": 1}]";
         Log.d("MARIELA","Gemini Prompt:"+prompt);
         Content content = new Content.Builder().addText(prompt).build();
 
