@@ -47,6 +47,7 @@ public class FromNet extends AsyncTask<String , Void, String> {
     /**
      *    doInBackground
      *    פעולה שרצה תוך כדי ביצוע    הבקשה הא-סינכרונית
+     בקש הבאת השאלות
      */
     @Override
     protected String doInBackground(String... strings) {
@@ -59,6 +60,8 @@ public class FromNet extends AsyncTask<String , Void, String> {
     /**
      *    onPostExecute
      *    פעולה שרצה אחרי סיום  ביצוע    הבקשה הא-סינכרונית
+     *    הפעולה מנתחת את קובץ ה JSON שהתקבל עם השאלות וממלאה את מאגר השאלות
+     *    המאגר יושב ב  MainActivity.questions אשר מוגדר כסטטי לצורך גישה ממקודות שונים בקוד
      */
     protected void onPostExecute(String s) {
         super.onPostExecute(s);
@@ -91,7 +94,7 @@ public class FromNet extends AsyncTask<String , Void, String> {
                 JSONObject arrElem=jsonArray.getJSONObject(i);
                 // question
                 question=arrElem.getString("question");
-                Log.d("MARIELA","Gemini found question:"+question);
+              //  Log.d("MARIELA","Gemini found question:"+question);
                 // array answers
                 JSONArray answersArray = arrElem.getJSONArray("answers");
                 String[] answers = new String[answersArray.length()];
@@ -102,15 +105,15 @@ public class FromNet extends AsyncTask<String , Void, String> {
                 correct_answer=arrElem.getInt("correct_answer");
                 String correct="";
                 correct=answers[correct_answer];
-                Log.d("MARIELA","Gemini correct:"+correct);
+                //Log.d("MARIELA","Gem  ini correct:"+correct);
                 //create question
                 Question q=new Question(question,answers[0],answers[1],answers[2],answers[3],correct);
-                Log.d("MARIELA","Gemini q:"+q.toString());
+                //Log.d("MARIELA","Gemini q:"+q.toString());
                 // add question to arraylist
                 MainActivity.questions.add(q);
-                Log.d("MARIELA","Gemini done:"+MainActivity.questions.toString());
+                //Log.d("MARIELA","Gemini done:"+MainActivity.questions.toString());
                 // handler send message can start game ?!
-                Log.d("MARIELA","Gemini num "+Integer.toString(MainActivity.questions.size()));
+                //Log.d("MARIELA","Gemini num "+Integer.toString(MainActivity.questions.size()));
             }
             verifyQuestions.sendEmptyMessage(MSG_QUESTIONS_LOADED);
         }
@@ -119,6 +122,12 @@ public class FromNet extends AsyncTask<String , Void, String> {
             e.printStackTrace();
         }
     }
+
+    /**
+     * getMeExternalInternetQuestions
+     * פעולה אשר מוריד קובץ עם שאלות עבור הטריוויה
+     * @return
+     */
     public  String getMeExternalInternetQuestions()
     {
         String info_url="https://raw.githubusercontent.com/ms0157/questions.json/refs/heads/main/questions.json";
@@ -127,7 +136,7 @@ public class FromNet extends AsyncTask<String , Void, String> {
         String temp = "";
         all="";
         try {
-            Log.d("MARIELA",info_url);
+            //Log.d("MARIELA",info_url);
             // create connection
             url = new URL(info_url);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -156,34 +165,37 @@ public class FromNet extends AsyncTask<String , Void, String> {
         }
         return all;
     }
+    /**
+     * getMeGeminiQuestions
+     * פעולה אשר פונה ל ג'מיני באמצעות API על מנת לקבל שאלות לטריוויה
+     * @return
+     */
     public String getMeGeminiQuestions()
     {
         // --- הגדרות Gemini ---
-        // יש להחליף את "GEMINI_API_KEY" במפתח ה-API שלך
-        // וודאי שאתה מגדיר אותו ב-buildConfigField כפי שהוצג למעלה
-        // אחרת, תצטרך להגדיר אותו כאן ישירות (פחות מומלץ)
-        String apiKey = BuildConfig.GEMINI_API_KEY; // נניח ששמרת אותו ב-BuildConfig
-        Log.d("MARIELA","Gemini Key by BuildConfig: "+apiKey);
+        // הגדרת משתנה ב local.properties
+        // הוספת משתנה בקובץ BuildConfig אשר נבנה אוטומטית בעזרת קובץ build.gradle.kts
+        // שליפת ערכו של המשתנה
+        //המטרה: מניעה מחשיפת המפתח בתוך ההקוד לצורך אבטחה
+        String apiKey = BuildConfig.GEMINI_API_KEY;
         all="";
-        Log.d("MARIELA","Gemini Key: "+apiKey);
         GenerativeModel gm = new GenerativeModel(
                 "gemini-2.5-flash", // או מודל אחר כמו "gemini-1.5-flash"
                 apiKey
         );
-        Log.d("MARIELA","Gemini Questions");
         GenerativeModelFutures model = GenerativeModelFutures.from(gm);
 
         // --- בניית הפרומפט (ההוראה ל-Gemini) ---
 
         String prompt = "Generate "+Integer.toString(NUM_QUESTIONS) +" trivia questions in JSON format. Each question should have a 'question' string, an 'answers' array of 4 strings, and a 'correct_answer' integer (0-3 indicating the index of the correct answer). Ensure the output is a valid JSON array of questions. Example: [{\"question\": \"What is 2+2?\", \"answers\": [\"3\", \"4\", \"5\", \"6\"], \"correct_answer\": 1}]";
-        Log.d("MARIELA","Gemini Prompt:"+prompt);
+        //Log.d("MARIELA","Gemini Prompt:"+prompt);
         Content content = new Content.Builder().addText(prompt).build();
 
         // --- שליחת הבקשה ---
         ListenableFuture<GenerateContentResponse> response = model.generateContent(content);
         try {
             String geminiResponseJson = response.get().getText();
-            Log.d("MARIELA", "Gemini Raw Response: " + geminiResponseJson);
+           //Log.d("MARIELA", "Gemini Raw Response: " + geminiResponseJson);
 
             // וודא שהתגובה היא JSON תקין (Gemini יכול לפעמים להוסיף טקסט לפני או אחרי ה-JSON)
             // נחפש את ה-JSON הראשון ונוציא אותו
