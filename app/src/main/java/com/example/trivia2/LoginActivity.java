@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
 
@@ -113,6 +114,8 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
         init();
         loadLastLoggedInUserData();
+        Log.d("MARIELA","Gemini Login "+Integer.toString(MainActivity.questions.size()));
+
         fabRegister.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {

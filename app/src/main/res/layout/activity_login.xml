@@ -61,12 +61,11 @@
 
     <CheckBox
         android:id="@+id/cbPersonal"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Personal phone"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="20dp"
-        android:layout_marginStart="30sp"
 
         />
 

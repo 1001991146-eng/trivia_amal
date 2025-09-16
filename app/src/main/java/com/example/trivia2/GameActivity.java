@@ -2,6 +2,7 @@ package com.example.trivia2;
 
 import android.annotation.SuppressLint;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -14,6 +15,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -30,6 +32,8 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 public class GameActivity extends AppCompatActivity {
+    public Context context;
+
     // properties stop game when call arrives
     public IncomingCallReceiver incomingCallReceiver;
     public IntentFilter intentFilterCall;
@@ -54,6 +58,9 @@ public class GameActivity extends AppCompatActivity {
     public ProgressBar pbQuestion;
     public TextView tvProgress;
     public String email;
+    public LinearLayout llQuestions;
+    public ProgressBar pbReady;
+    public TextView tvLoading;
     /**
      * init
      *      פעולה שמאתחלת את אקטיביטי הראשי של המשחק
@@ -64,6 +71,7 @@ public class GameActivity extends AppCompatActivity {
      */
     public void init()
     {
+        this.context=context;
         tvTimer=findViewById(R.id.tvTimer);
         tvQuestion=findViewById(R.id.tvQuestion);
         tvAnswer1=findViewById(R.id.tvAnswer1);
@@ -76,12 +84,18 @@ public class GameActivity extends AppCompatActivity {
         fab4=findViewById(R.id.fab4);
         pbQuestion=findViewById(R.id.pbQuestion);
         tvProgress=findViewById(R.id.tvProgress);
+        llQuestions=findViewById(R.id.llQuestions);
+        pbReady=findViewById(R.id.pbReady);
+        tvLoading=findViewById(R.id.tvLoading);
+        Log.d("MARIELA","Gemini Game Activity "+Integer.toString(MainActivity.questions.size()));
+
 
         points=0;
         email="";
         helperDB=new HelperDB(this);
         Intent it= new Intent(GameActivity.this, MusicService.class);
         startService(it);
+
     }
     /**
      * getRandomQuestion
@@ -468,7 +482,29 @@ public class GameActivity extends AppCompatActivity {
         {
             Log.d("MARIELA","No permission for recieving call");
         }
-        getRandomQuestion();
+
+            llQuestions.setVisibility(View.INVISIBLE);
+            pbReady.setVisibility(View.VISIBLE);
+            tvLoading.setVisibility(View.VISIBLE);
+
+
+            if (MainActivity.isGameReady)
+            {
+                Log.d("MARIELA","Fast load of questions");
+                llQuestions.setVisibility(View.VISIBLE);
+                //pbReady.setVisibility(View.INVISIBLE);
+                //tvLoading.setVisibility(View.INVISIBLE);
+                pbReady.setVisibility(View.GONE);
+                tvLoading.setVisibility(View.GONE);
+                getRandomQuestion();
+            }
+            else {
+                Log.d("MARIELA","Slow load of questions");
+                new DownloadQuestionsTask(this).execute();
+                Log.d("MARIELA","Slow load of questions2");
+
+            }
+
     }
     /**
      * onDestroy

@@ -2,10 +2,13 @@ package com.example.trivia2;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.View;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -16,8 +19,11 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
+    public Handler verifyQuestions;
+    public final int MSG_QUESTIONS_LOADED=1;
 
     public static ArrayList<Question> questions;
+    public static boolean isGameReady;
 
     public FloatingActionButton fabStart;
     /**
@@ -26,7 +32,20 @@ public class MainActivity extends AppCompatActivity {
      */
     public void init()
     {
+
         fabStart=findViewById(R.id.fabStart);
+        isGameReady=false;
+        verifyQuestions=new Handler(new Handler.Callback() {
+            @Override
+            public boolean handleMessage(@NonNull Message message) {
+                if (message.what==MSG_QUESTIONS_LOADED)
+                {
+                    Log.d("MARIELA","Game is ready!");
+                    isGameReady=true;
+                }
+                return false;
+            }
+        });
     }
     /**
      *  loadQuestions
@@ -41,9 +60,11 @@ public class MainActivity extends AppCompatActivity {
         //String info_url="https://raw.githubusercontent.com/ms0157/questions.json/main/questi\ons.json";
         //https://github.com/ms0157/questions.xml/blob/main/questions.xml
 
-        String info_url="https://raw.githubusercontent.com/ms0157/questions.json/refs/heads/main/questions.json";
-        new FromNet().execute(info_url);
+        new FromNet(verifyQuestions).execute();
+        Log.d("MARIELA","Gemini Main Activity "+Integer.toString(MainActivity.questions.size()));
+
     }
+
     /**
     * onCreate
      *      פעולה שמאתחלת את אקטיביטי הראשי
@@ -56,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
         Log.d("MARIELA", "here");
         init();
         loadQuestions();
+        Log.d("MARIELA","Gemini After load "+Integer.toString(MainActivity.questions.size()));
 
         fabStart.setOnClickListener(new View.OnClickListener() {
                 @Override

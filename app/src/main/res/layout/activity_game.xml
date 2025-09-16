@@ -9,53 +9,76 @@
     android:orientation="vertical"
     >
 
-    <LinearLayout
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="20sp"
+        android:text="Loading questions..."
+        android:id="@+id/tvLoading"
+        android:fontFamily="sans-serif-light"
+        android:layout_marginTop="20dp"
+        android:textSize="30dp"
         android:layout_gravity="center_horizontal"
-        >
-
-        <ImageView
-            android:id="@+id/ivTimer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:srcCompat="@drawable/schedule_24" />
-
-        <TextView
-            android:id="@+id/tvTimer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="o seconds" />
-    </LinearLayout>
-
-    <ImageView
-        android:id="@+id/ivQuestion"
+        ></TextView>
+    <ProgressBar
+        android:id="@+id/pbReady"
         android:layout_width="100dp"
         android:layout_height="100dp"
-        tools:srcCompat="@drawable/question_mark_24"
         android:layout_gravity="center_horizontal"
-        />
+        android:visibility="gone"
+        >
 
-    <TextView
-        android:id="@+id/tvQuestion"
-        android:layout_width="match_parent"
+    </ProgressBar>
+    <LinearLayout
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Question"
+        android:orientation="vertical"
         android:layout_marginStart="30sp"
-        android:layout_marginBottom="30sp"
-        android:textSize="20sp"
+        android:id="@+id/llQuestions"
+        android:fontFamily="sans-serif-light"
+        >
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="20sp"
+            android:layout_gravity="center_horizontal"
+            >
 
-        />
+            <ImageView
+                android:id="@+id/ivTimer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:srcCompat="@drawable/schedule_24" />
 
+            <TextView
+                android:id="@+id/tvTimer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="o seconds"
+                android:textSize="30dp"
+                />
+        </LinearLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/tvQuestion"
+            android:textSize="30dp"
+            android:layout_marginLeft="50dp"
+            ></TextView>
+        <ImageView
+            android:id="@+id/ivQuestion"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            tools:srcCompat="@drawable/question_mark_24"
+            android:layout_gravity="center_horizontal"
+            />
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:layout_marginStart="30sp"
-
         >
+
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fab1"
             android:layout_width="wrap_content"
@@ -71,11 +94,10 @@
             />
         <TextView
             android:id="@+id/tvAnswer1"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Answer 1"
-            android:textSize="20sp"
-
+            android:textSize="20dp"
             />
     </LinearLayout>
 
@@ -101,7 +123,7 @@
             />
         <TextView
             android:id="@+id/tvAnswer2"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Answer 2"
             android:textSize="20sp"
@@ -130,7 +152,7 @@
             />
         <TextView
             android:id="@+id/tvAnswer3"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Answer 3"
             android:textSize="20sp"
@@ -158,7 +180,7 @@
             />
         <TextView
             android:id="@+id/tvAnswer4"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Answer 4"
             android:textSize="20sp"
@@ -184,5 +206,7 @@
         android:layout_gravity="center_horizontal"
         android:textSize="25sp"
         />
+
+    </LinearLayout>
 
 </LinearLayout>
