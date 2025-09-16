@@ -163,9 +163,8 @@ public class FromNet extends AsyncTask<String , Void, String> {
         // וודאי שאתה מגדיר אותו ב-buildConfigField כפי שהוצג למעלה
         // אחרת, תצטרך להגדיר אותו כאן ישירות (פחות מומלץ)
         String apiKey = BuildConfig.GEMINI_API_KEY; // נניח ששמרת אותו ב-BuildConfig
-
+        Log.d("MARIELA","Gemini Key by BuildConfig: "+apiKey);
         all="";
-       apiKey = "AIzaSyBdQe8oJv7O7BONRHbaU27a8sjTktWhHBY";
         Log.d("MARIELA","Gemini Key: "+apiKey);
         GenerativeModel gm = new GenerativeModel(
                 "gemini-2.5-flash", // או מודל אחר כמו "gemini-1.5-flash"
