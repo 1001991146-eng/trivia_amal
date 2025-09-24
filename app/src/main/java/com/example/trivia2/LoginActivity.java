@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -40,6 +41,30 @@ public class LoginActivity extends AppCompatActivity {
         etPassword=findViewById(R.id.etPassword);
         helperDB=new HelperDB(this);
     }
+    public void loginFB()
+    {
+        String email=etEmail.getText().toString();
+        String password=etPassword.getText().toString();
+        Auth.signIn(LoginActivity.this, email, password, task -> {
+            if (task.isSuccessful()) {
+                Toast.makeText(LoginActivity.this, "Login Successful", Toast.LENGTH_SHORT).show();
+                //startActivity(new Intent(LoginActivity.this, MainActivity.class);
+                if (cbPersonal.isChecked())
+                {
+                    // save email and password in shared prefferences
+                    saveLogedInUserInSharedPreferences();
+                }
+                Intent intent = new Intent(LoginActivity.this, GameActivity.class);
+                intent.putExtra("email",etEmail.getText().toString());
+                startActivity(intent);
+
+            } else {
+                Toast.makeText(LoginActivity.this, "Login Failed: " + task.getException(), Toast.LENGTH_SHORT).show();
+
+            }
+        });
+    }
+
     /**
      * verifyUserExist
      * הפעולה פונה למסד נתונים ובודקת האם המשתמש קיים והסיסמה שלו תקינה
@@ -126,7 +151,10 @@ public class LoginActivity extends AppCompatActivity {
         fabLogin.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    //perform login
+                    loginFB();
+
+                    //perform login SQLite
+                    /*
                     if (verifyUserExist()) {
                         if (cbPersonal.isChecked())
                         {
@@ -137,6 +165,7 @@ public class LoginActivity extends AppCompatActivity {
                         intent.putExtra("email",etEmail.getText().toString());
                         startActivity(intent);
                     }
+                    */
                 }
             });
     ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {

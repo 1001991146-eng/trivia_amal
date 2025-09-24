@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -93,13 +94,29 @@ public class RegisterActivity extends AppCompatActivity {
         }
         return  true;
     }
+    public void fabRegister()
+    {
+        String email=etEmailReg.getText().toString();
+        String password=etPasswordReg.getText().toString();
+        Auth.signUp(RegisterActivity.this, email, password, task -> {
+            if (task.isSuccessful()) {
+                Toast.makeText(RegisterActivity.this, "Signup Successful", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(RegisterActivity.this, GameActivity.class);
+                intent.putExtra("email",etEmailReg.getText().toString());
+                startActivity(intent);
+            } else {
+                Toast.makeText(RegisterActivity.this, "Signup Failed: " + task.getException(), Toast.LENGTH_SHORT).show();
+            }
+        });
+
+    }
     /**
      * insertNewUserToDBS
      * הפעולה שומרת את פרטי ההרשמה של המשתמש במסד נתונים
      */
     public void insertNewUserToDBS()
     {
-
+            // SQLite insert
         String first=etFirstReg.getText().toString();
         String last=etLastReg.getText().toString();
         String email=etEmailReg.getText().toString();
@@ -130,7 +147,10 @@ public class RegisterActivity extends AppCompatActivity {
         fabOKReg.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    // verify data
+                    fabRegister();
+
+                    // verify data SQLite
+                    /*
                     if (verifyData()) {
                         // insert user to dbs
                         insertNewUserToDBS();
@@ -139,6 +159,8 @@ public class RegisterActivity extends AppCompatActivity {
                         intent.putExtra("email",etEmailReg.getText().toString());
                         startActivity(intent);
                     }
+                    */
+
                 }
             });
         fabCancelReg.setOnClickListener(new View.OnClickListener() {
