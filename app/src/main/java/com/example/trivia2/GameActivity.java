@@ -30,6 +30,11 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 public class GameActivity extends AppCompatActivity {
     public Context context;
@@ -37,14 +42,15 @@ public class GameActivity extends AppCompatActivity {
     // properties stop game when call arrives
     public IncomingCallReceiver incomingCallReceiver;
     public IntentFilter intentFilterCall;
-    // properties dbs
-    public HelperDB helperDB;
-    public SQLiteDatabase db;
+
+    private FirebaseDatabase database;
+    private DatabaseReference topScoresRef; // A reference to the root or a specific path
+
     // properties current question
     public Question current;
     public int points;
     public int rounds=0;
-    public final int MAX_ROUNDS=20;
+    public final int MAX_ROUNDS=5;
     // properties timer
     public static boolean play;
     public static boolean isTimerPaused = false; // Track if the timer is paused
@@ -89,13 +95,11 @@ public class GameActivity extends AppCompatActivity {
         tvLoading=findViewById(R.id.tvLoading);
         Log.d("MARIELA","Gemini Game Activity "+Integer.toString(MainActivity.questions.size()));
 
-
         points=0;
         email="";
-        helperDB=new HelperDB(this);
+        topScoresRef = FirebaseDatabase.getInstance().getReference("TopScores");
         Intent it= new Intent(GameActivity.this, MusicService.class);
         startService(it);
-
     }
     /**
      * getRandomQuestion
@@ -104,7 +108,6 @@ public class GameActivity extends AppCompatActivity {
      */
     public boolean getRandomQuestion()
     {
-
         int numQuestions=MainActivity.questions.size();
         Log.d("MARIELA","getRandomQuestion"+Integer.toString(numQuestions));
 
@@ -135,70 +138,131 @@ public class GameActivity extends AppCompatActivity {
      * playedBefore
      * בדיקה האם השחקן הנוכחי שיחק בעבר ושמור ניקוד קודם במסד נתונים
      */
-    public boolean playedBefore()
-    {
-        SQLiteDatabase db = helperDB.getReadableDatabase();
-        String[] projection = {helperDB.USER_EMAIL_COL,helperDB.POINTS_COL};
-        String selection = helperDB.USER_EMAIL_COL + " = ?";
-        String[] selectionArgs = new String [] {email};
 
-        Cursor cursor = db.query(helperDB.TOP_SCORES_TABLE, projection, selection, selectionArgs, null, null, null);
-
-        if (cursor.getCount()==0)
-        {
-            return false;
-        }
-        return true;
-    }
     /**
      * updateScore
      * עדכון ניקוד המשתמש בנוכחי במסד נתונים
      */
-    public void updateScore()
+
+    public  void updateScoreFBSimple()
     {
-        SQLiteDatabase db=helperDB.getWritableDatabase();
-        String[] projection = {helperDB.USER_EMAIL_COL,helperDB.POINTS_COL};
-        String selection = helperDB.USER_EMAIL_COL + " = ?";
-        String[] selectionArgs = new String [] {email};
+        Log.d("MARIELA","updateScoreFBSimple "+email+","+Integer.toString(points));
+        // שלב 1: איתור המשתמש במסד הנתונים לפי אימייל
+        topScoresRef.orderByChild("email").equalTo(email)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        if (dataSnapshot.exists()) {
+                            // נמצא משתמש עם האימייל הנתון
+                            Log.d("MARIELA","dataSnapshot");
+                            for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                                // שלב 2: עדכון הנתונים של המשתמש
+                                TopScores top=snapshot.getValue(TopScores.class);
+                                Log.d("MARIELA","found previous score "+top.toString());
 
-        Cursor cursor = db.query(helperDB.TOP_SCORES_TABLE, projection, selection, selectionArgs, null, null, null);
 
-        boolean result = cursor.moveToFirst();
-        String col=helperDB.POINTS_COL;
-        int index = cursor.getColumnIndexOrThrow(col);
-        String pointsDB= cursor.getString(index);
+                                if (points>Integer.parseInt(top.getMaxScore())) {
+                                    snapshot.getRef().setValue(top)
+                                            .addOnSuccessListener(aVoid -> {
+                                                Log.d("MARIELA", "Score  for " + email + " updated successfully.");
+                                            })
+                                            .addOnFailureListener(e -> {
+                                                Log.e("MARIELA", "Failed to update score  for " + email, e);
+                                            });
+                                }
+                            }
+                        } else {
+                            // לא נמצא משתמש עם האימייל הנתון
+                            Log.d("MARIELA", "User with email " + email + " not found for update.");
+                        }
+                    }
 
-        int numPointsDB=Integer.parseInt(pointsDB);
-        if (points>numPointsDB)
-        {
-            //update only is higher than previous score
-            String [] oldData={email};
-            String infield=helperDB.USER_EMAIL_COL+"=?";
-            ContentValues cv=new ContentValues();
-            cv.put(helperDB.POINTS_COL,Integer.toString(points));
-            int rowsChanged= db.update(helperDB.TOP_SCORES_TABLE, cv, infield,oldData);
-            if (rowsChanged>0)
-            {
-                Log.d("MARIELA","Updated score");
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+                        // טיפול בשגיאות
+                        Log.e("MARIELA", "Database query cancelled: " + databaseError.getMessage());
+                    }
+                });
+
+    }
+    public void getPlayerScore(String email, final OnScoreCheckListener listener) {
+        topScoresRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                String userKey = null;
+                TopScores existingScore = null;
+
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    TopScores score = snapshot.getValue(TopScores.class);
+                    if (score != null && score.getEmail().equals(email)) {
+                        userKey = snapshot.getKey();
+                        existingScore = score;
+                        break;
+                    }
+                }
+                listener.onCheckResult(userKey, existingScore);
             }
-        }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                Log.e("FirebaseRead", "Failed to read value.", databaseError.toException());
+                listener.onCheckResult(null, null);
+            }
+        });
+    }
+
+    public interface OnScoreCheckListener {
+        // הפעולה תחזיר את הציון הקיים (או null) ואת מפתח הצומת (או null)
+        void onCheckResult(String userKey, TopScores existingScore);
+    }
+    public void updateScoreFB() {
+        Log.d("MARIELA","UpdateScoreFB"+Integer.toString(points)+","+email);
+        getPlayerScore(email, new OnScoreCheckListener() {
+            @Override
+            public void onCheckResult(String userKey, TopScores existingScore) {
+                if (existingScore != null) {
+                    // השחקן קיים
+                    int currentScoreValue = Integer.parseInt(existingScore.getMaxScore());
+                    if (points > currentScoreValue) {
+                        // הציון החדש גבוה יותר, נעדכן אותו
+                        Log.d("MARIELA", "Updating score for " + email + " from " + currentScoreValue + " to " + points);
+
+                        // נעדכן ישירות את הציון באמצעות מפתח הצומת שקיבלנו
+                        topScoresRef.child(userKey).child("maxScore").setValue(String.valueOf(points));
+                    } else {
+                        // הציון החדש אינו גבוה יותר, אין צורך בעדכון
+                        Log.d("MARIELA", "New score is not higher. No update needed.");
+                    }
+                } else {
+                    // השחקן לא קיים, נוסיף אותו
+                    insertScoreToFB(email, points);
+                }
+            }
+        });
     }
     /*
-    * insertScoreToDBS
+    * insertScoreToFB
      *  פעולה שמטרתה להכניס ניקוד המשחק במסד נתונים
      * במידה וזו פעם ראשונה שהשחקן משחק
      *  */
-    public void insertScoreToDBS()
+    public  void insertScoreToFB(String email, int points)
     {
+        Log.d("MARIELA","insertScoreToFB "+email+","+Integer.toString(points));
         TopScores top=new TopScores(email, Integer.toString(points));
+        String userId = "user" + System.currentTimeMillis();
 
-        ContentValues cv= new ContentValues();
-        cv.put(helperDB.USER_EMAIL_COL,top.getEmail());
-        cv.put(helperDB.POINTS_COL,top.getMaxScore());
-        db=helperDB.getWritableDatabase();
-        db.insert(helperDB.TOP_SCORES_TABLE,null,cv);
-        db.close();
+        // שמירת הציון במסד הנתונים
+        topScoresRef.child(userId).setValue(top)
+                .addOnSuccessListener(aVoid -> {
+                    // הצלחת השמירה
+                    Log.d("MARIELA", "Score added successfully for " + email);
+                })
+                .addOnFailureListener(e -> {
+                    // כישלון בשמירה
+                    Log.e("MARIELA", "Failed to add score for " + email, e);
+                });
     }
+
     /**
      * goToNext
      * פעולה שמטרתה להתקדם לשאלה באה או לסיים את המשחק
@@ -209,14 +273,9 @@ public class GameActivity extends AppCompatActivity {
         if (!getRandomQuestion())
         {
             stopTimer();
-            if (!playedBefore())
-            {
-                //game over
-                insertScoreToDBS();
-            }
-            else {
-                updateScore();
-            }
+            //updateScoreFB();
+            Log.d("MARIELA","Stoped");
+            updateScoreFBSimple();
             Intent intent=new Intent(GameActivity.this, GameOverActivity.class);
             intent.putExtra("points",points);
             intent.putExtra("email",email);
@@ -240,7 +299,6 @@ public class GameActivity extends AppCompatActivity {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 goToNext();
-
             }
         });
         adbCorrectResponse.create().show();
@@ -460,7 +518,6 @@ public class GameActivity extends AppCompatActivity {
         setContentView(R.layout.activity_game);
         Log.d("mariela","load questions");
         init();
-        //  loadQuestions();
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -482,11 +539,9 @@ public class GameActivity extends AppCompatActivity {
         {
             Log.d("MARIELA","No permission for recieving call");
         }
-
             llQuestions.setVisibility(View.INVISIBLE);
             pbReady.setVisibility(View.VISIBLE);
             tvLoading.setVisibility(View.VISIBLE);
-
 
             if (MainActivity.isGameReady)
             {
@@ -502,9 +557,7 @@ public class GameActivity extends AppCompatActivity {
                 Log.d("MARIELA","Slow load of questions");
                 new DownloadQuestionsTask(this).execute();
                 Log.d("MARIELA","Slow load of questions2");
-
             }
-
     }
     /**
      * onDestroy

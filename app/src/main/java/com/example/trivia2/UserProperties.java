@@ -9,6 +9,18 @@ public class UserProperties {
     private String password;//סיסמה
     /**
      * UserProperties
+     *      פעולה שבונה אשר מסייעת ל realrime database  לבצע שמירה
+     */
+    public  UserProperties()
+    {
+        this.firstName ="";
+        this.lastName="";
+        this.email="";
+        this.phone="";
+        this.password="";
+    }
+    /**
+     * UserProperties
      *      פעולה שבונה אשר בונה  שחקן
      */
     public UserProperties(String firstName, String lastName, String email, String phone, String password) {

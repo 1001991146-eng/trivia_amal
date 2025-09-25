@@ -6,6 +6,15 @@ public class TopScores {
     private String maxScore;//ניקוד השחקן במשחק
     /**
      * TopScores
+     *      פעולה שבונה אשר מסייעת ל realtime database לבצע שמירה
+     */
+    public TopScores()
+    {
+        this.email="";
+        this.maxScore="";
+    }
+    /**
+     * TopScores
      *      פעולה שבונה אשר בונה ניקוד של שחקן
      */
     public TopScores(String email, String maxScore) {

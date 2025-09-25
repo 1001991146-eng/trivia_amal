@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -15,10 +16,17 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 public class RegisterActivity extends AppCompatActivity {
-    public HelperDB helperDB;
-    public SQLiteDatabase db;
+    private FirebaseDatabase database;
+    private DatabaseReference userPropertiesRef; // A reference to the root or a specific path
+    public void initFB() {
+        database = FirebaseDatabase.getInstance();
+        userPropertiesRef = database.getReference("UserProperties");
+    }
+
 
     public ExtendedFloatingActionButton fabCancelReg, fabOKReg;
     public TextInputEditText etEmailReg,etLastReg,etFirstReg,etPhone,etPasswordReg;
@@ -37,7 +45,7 @@ public class RegisterActivity extends AppCompatActivity {
         etFirstReg=findViewById(R.id.etFirstReg);
         etPhone=findViewById(R.id.etPhone);
         etPasswordReg=findViewById(R.id.etPasswordReg);
-        helperDB=new HelperDB(this);
+        initFB();
     }
     /**
      * verifyData
@@ -93,7 +101,41 @@ public class RegisterActivity extends AppCompatActivity {
             return false; // Password is too short
         }
         return  true;
+
     }
+    /**
+     * insertUserPropertiesFB
+     * הפעולה שומרת את פרטי ההרשמה של המשתמש במסד נתונים
+     */
+    public void insertUserPropertiesFB()
+    {
+        String fName=etFirstReg.getText().toString();
+        String lName=etLastReg.getText().toString();
+        String email=etEmailReg.getText().toString();
+        String phone=etPhone.getText().toString();
+        String password=etPasswordReg.getText().toString();
+
+
+        Log.d("MARIELA","insertUserPropertiesToFB "+email);
+        UserProperties userProperties=new UserProperties(fName,lName,email,phone,password);
+        String userId = "user" + System.currentTimeMillis();
+
+        // שמירת הציון במסד הנתונים
+        userPropertiesRef.child(userId).setValue(userProperties)
+                .addOnSuccessListener(aVoid -> {
+                    // הצלחת השמירה
+                    Log.d("MARIELA", "User properties added successfully for " + email);
+                })
+                .addOnFailureListener(e -> {
+                    // כישלון בשמירה
+                    Log.e("MARIELA", "Failed to add user properties for " + email, e);
+                });
+
+    }
+    /*
+    fabRegister
+    הפעולה מבצעת הרשמה באמצעות שירות הזדהות של פיירבייס וגם הכנסה של פרטי משתמש לrealtime database
+     */
     public void fabRegister()
     {
         String email=etEmailReg.getText().toString();
@@ -101,6 +143,8 @@ public class RegisterActivity extends AppCompatActivity {
         Auth.signUp(RegisterActivity.this, email, password, task -> {
             if (task.isSuccessful()) {
                 Toast.makeText(RegisterActivity.this, "Signup Successful", Toast.LENGTH_SHORT).show();
+                insertUserPropertiesFB();
+
                 Intent intent = new Intent(RegisterActivity.this, GameActivity.class);
                 intent.putExtra("email",etEmailReg.getText().toString());
                 startActivity(intent);
@@ -109,30 +153,6 @@ public class RegisterActivity extends AppCompatActivity {
             }
         });
 
-    }
-    /**
-     * insertNewUserToDBS
-     * הפעולה שומרת את פרטי ההרשמה של המשתמש במסד נתונים
-     */
-    public void insertNewUserToDBS()
-    {
-            // SQLite insert
-        String first=etFirstReg.getText().toString();
-        String last=etLastReg.getText().toString();
-        String email=etEmailReg.getText().toString();
-        String phone=etPhone.getText().toString();
-        String password=etPasswordReg.getText().toString();
-        UserProperties user=new UserProperties(first, last, email,  phone, password);
-
-        ContentValues cv= new ContentValues();
-        cv.put(helperDB.FIRST_NAME_COL,user.getFirstName());
-        cv.put(helperDB.LAST_NAME_COL,user.getLastName());
-        cv.put(helperDB.EMAIL_COL,user.getEmail());
-        cv.put(helperDB.PHONE_COL,user.getPhone());
-        cv.put(helperDB.PASSWORD_COL,user.getPassword());
-        db=helperDB.getWritableDatabase();
-        db.insert(helperDB.USERS_TABLE,null,cv);
-        db.close();
     }
     /**
      * onCreate
@@ -148,18 +168,6 @@ public class RegisterActivity extends AppCompatActivity {
                 @Override
                 public void onClick(View view) {
                     fabRegister();
-
-                    // verify data SQLite
-                    /*
-                    if (verifyData()) {
-                        // insert user to dbs
-                        insertNewUserToDBS();
-                        // goto game
-                        Intent intent = new Intent(RegisterActivity.this, GameActivity.class);
-                        intent.putExtra("email",etEmailReg.getText().toString());
-                        startActivity(intent);
-                    }
-                    */
 
                 }
             });

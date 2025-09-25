@@ -15,6 +15,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
@@ -23,6 +24,11 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.Locale;
 
@@ -38,16 +44,14 @@ public class UserSettingsActivity extends AppCompatActivity {
     public TextInputEditText etFirstEdit,etLastEdit, etEmailEdit,etPhoneEdit,etPasswordEdit;
     String email;
 
-    // dbs properties
-    public HelperDB helperDB;
-    public SQLiteDatabase db;
+    private FirebaseDatabase database;
+    private DatabaseReference userPropertiesRef; // A reference to the root or a specific path
     /**
      * init
      * הפעולה מטרתה להתחל את כל קישור לכל הרכיבים על מסך
      * ולייצר קשר למסד הנתונים על ידי יצירת עצם מסוג
      * HelperDb
      */
-
     public void init()
     {
         etFirstEdit=findViewById(R.id.etFirstEdit);
@@ -58,7 +62,8 @@ public class UserSettingsActivity extends AppCompatActivity {
         fabOkEdit=findViewById(R.id.fabOkEdit);
         fabDeleteEdit=findViewById(R.id.fabDeleteEdit);
         email="";
-        helperDB=new HelperDB(this);
+        database = FirebaseDatabase.getInstance();
+        userPropertiesRef = database.getReference("UserProperties");
     }
     /**
      * initLanguage
@@ -76,7 +81,6 @@ public class UserSettingsActivity extends AppCompatActivity {
      * read
      * הפעולה מטרתה להקריא הודעה למשתמש באמצעות TTS
      * */
-
     public void read(String message)
     {
         textToSpeech = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
@@ -91,56 +95,43 @@ public class UserSettingsActivity extends AppCompatActivity {
 
     }
     /**
-     * loadCurrentData
+     * loadCurrentDataFB
      * הפעולה שמטרתה להביא ממסד הנצונים את פרטי המשתמש המחובר להצגה במסך עריכת פרטי משתמש
      * */
-    public void loadCurrentData()
+    public  void loadCurrentDataFB()
     {
-        SQLiteDatabase db = helperDB.getReadableDatabase();
+        Log.d("MARIELA","loadCurrentDataFB");
+        // הוספת מאזין לקריאת הנתונים
+        userPropertiesRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                Log.d("MARIELA","onDataChange "+dataSnapshot.getKey());
 
-        String[] projection = {helperDB.FIRST_NAME_COL, helperDB.LAST_NAME_COL ,helperDB.EMAIL_COL,helperDB.PHONE_COL ,helperDB.PASSWORD_COL};
-        String selection = helperDB.EMAIL_COL + " = ?";
-        String[] selectionArgs = new String [] {email};
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    Log.d("MARIELA", "Child snapshot key: " + snapshot.getKey());
+                    UserProperties user = snapshot.getValue(UserProperties.class);
+                    if (user != null && user.getEmail().equals(email)) {
+                        Log.d("MARIELA", "Retrieved user: " + user.toString());
+                        etFirstEdit.setText(user.getFirstName());
+                        etLastEdit.setText(user.getLastName());
+                        etEmailEdit.setText(user.getEmail());
+                        etPhoneEdit.setText(user.getPhone());
+                        etPasswordEdit.setText(user.getPassword());
+                    }
+                }
+            }
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                // טיפול בשגיאה
+                Log.e("FirebaseRead", "Failed to read value.", databaseError.toException());
+                etFirstEdit.setText("");
+                etLastEdit.setText("");
+                etEmailEdit.setText(email);
+                etPhoneEdit.setText("");
+                etPasswordEdit.setText("");
+            }
+        });
 
-        Cursor cursor = db.query(helperDB.USERS_TABLE, projection, selection, selectionArgs, null, null, null);
-
-        if (cursor.getCount()==0)
-        {
-            cursor.close();
-            db.close();// no user by that name
-            Log.d("MARIELA","Failed to load user data");
-        }
-        else {
-            boolean result = cursor.moveToFirst();
-
-            String col = helperDB.FIRST_NAME_COL;
-            int index = cursor.getColumnIndexOrThrow(col);
-            String value = cursor.getString(index);
-            etFirstEdit.setText(value);
-
-            col = helperDB.LAST_NAME_COL;
-            index = cursor.getColumnIndexOrThrow(col);
-            value = cursor.getString(index);
-            etLastEdit.setText(value);
-
-            col = helperDB.EMAIL_COL;
-            index = cursor.getColumnIndexOrThrow(col);
-            value = cursor.getString(index);
-            etEmailEdit.setText(value);
-
-            col = helperDB.PHONE_COL;
-            index = cursor.getColumnIndexOrThrow(col);
-            value = cursor.getString(index);
-            etPhoneEdit.setText(value);
-
-            col = helperDB.PASSWORD_COL;
-            index = cursor.getColumnIndexOrThrow(col);
-            value = cursor.getString(index);
-            etPasswordEdit.setText(value);
-
-            cursor.close();
-            db.close();
-        }
     }
     /**
      * verifyData
@@ -187,57 +178,86 @@ public class UserSettingsActivity extends AppCompatActivity {
         return  true;
     }
     /**
-     * updateData
+     * updateDataFB
      * הפעולה שמטרתה לעדכן את מסד הנתונים עם פרטי המשתמש המעודכן
      * */
-    public void updateData()
+    public  void updateDataFB()
     {
-        SQLiteDatabase db=helperDB.getWritableDatabase();
+        UserProperties userProperties=new UserProperties(etFirstEdit.getText().toString(),
+                etLastEdit.getText().toString(),
+                etEmailEdit.getText().toString(),
+                etPhoneEdit.getText().toString(),
+                etPasswordEdit.getText().toString());
+        // שלב 1: איתור המשתמש במסד הנתונים לפי אימייל
+        userPropertiesRef.orderByChild("email").equalTo(email)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        if (dataSnapshot.exists()) {
+                            // נמצא משתמש עם האימייל הנתון
+                            for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                                // שלב 2: עדכון הנתונים של המשתמש
+                                snapshot.getRef().setValue(userProperties)
+                                        .addOnSuccessListener(aVoid -> {
+                                            Log.d("MARIELA", "User properties for " + email + " updated successfully.");
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            Log.e("MARIELA", "Failed to update user properties for " + email, e);
+                                        });
+                            }
+                        } else {
+                            // לא נמצא משתמש עם האימייל הנתון
+                            Log.d("MARIELA", "User with email " + email + " not found for update.");
+                        }
+                    }
 
-        String [] oldData={email};
-        String infield=helperDB.EMAIL_COL+"=?";
-        ContentValues cv=new ContentValues();
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+                        // טיפול בשגיאות
+                        Log.e("MARIELA", "Database query cancelled: " + databaseError.getMessage());
+                    }
+                });
 
-        cv.put(helperDB.FIRST_NAME_COL,etFirstEdit.getText().toString());
-        cv.put(helperDB.LAST_NAME_COL,etLastEdit.getText().toString());
-        cv.put(helperDB.PHONE_COL,etPhoneEdit.getText().toString());
-        cv.put(helperDB.PASSWORD_COL,etPasswordEdit.getText().toString());
-
-        int rowsChanged= db.update(helperDB.USERS_TABLE, cv, infield,oldData);
-        if (rowsChanged>0)
-        {
-            Log.d("MARIELA","Updated user");
-            AlertDialog.Builder adbCorrectResponse;
-            adbCorrectResponse = new AlertDialog.Builder(this);
-            adbCorrectResponse.setTitle("User Settings");
-            adbCorrectResponse.setMessage("User updated");
-            adbCorrectResponse.setCancelable(false);
-            adbCorrectResponse.setIcon(R.drawable.info_24);
-            adbCorrectResponse.setNeutralButton("OK", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-
-                }
-            });
-            adbCorrectResponse.create().show();
-        }
     }
+
     /**
-     * deleteUser
+     * deleteUserFB
      * הפעולה שמטרתה למחוק משתמש מחובר
      * */
-    public void deleteUser()
+    public void deleteUserFB()
     {
-        db=helperDB.getWritableDatabase();
-        String where=helperDB.EMAIL_COL+"=?";
-        String [] args=new String [] {email};
-        db.delete(helperDB.USERS_TABLE,where, args);
+        // השתמש ב-addListenerForSingleValueEvent כדי לקרוא את הנתונים פעם אחת
+        userPropertiesRef.orderByChild("email").equalTo(email)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        if (dataSnapshot.exists()) {
+                            // נמצא משתמש עם האימייל הנתון
+                            for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                                // ה-snapshot הנוכחי הוא הצומת של המשתמש
+                                // כעת יש לנו התייחסות ישירה לצומת
 
-        where=helperDB.USER_EMAIL_COL+"=?";
-        args=new String [] {email};
-        db.delete(helperDB.TOP_SCORES_TABLE,where, args);
-        db.close();
+                                // שלב 2: מחיקת הנתונים
+                                snapshot.getRef().removeValue()
+                                        .addOnSuccessListener(aVoid -> {
+                                            Log.d("MARIELA", "User with email " + email + " deleted successfully.");
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            Log.e("MARIELA", "Failed to delete user with email " + email, e);
+                                        });
+                            }
+                        } else {
+                            // לא נמצא משתמש עם האימייל הנתון
+                            Log.d("MARIELA", "User with email " + email + " not found.");
+                        }
+                    }
 
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+                        // טיפול בשגיאות
+                        Log.e("MARIELA", "Database query cancelled: " + databaseError.getMessage());
+                    }
+                });
     }
     /**
      * onCreate
@@ -256,7 +276,8 @@ public class UserSettingsActivity extends AppCompatActivity {
         init();
         Intent intent=getIntent();
         email=intent.getStringExtra("email");
-        loadCurrentData();
+        //loadCurrentData();
+        loadCurrentDataFB();
         fabOkEdit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -264,7 +285,7 @@ public class UserSettingsActivity extends AppCompatActivity {
                 if (verifyData())
                 {
                     // save data to dbs
-                    updateData();
+                    updateDataFB();
                 }
 
             }
@@ -285,7 +306,7 @@ public class UserSettingsActivity extends AppCompatActivity {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         // delete user
-                        deleteUser();
+                        deleteUserFB();
                         // back to login
                         Intent intent=new Intent(UserSettingsActivity.this, LoginActivity.class);
                         startActivity(intent);

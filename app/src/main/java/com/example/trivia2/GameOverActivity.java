@@ -5,18 +5,28 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import java.util.ArrayList;
+import java.util.List;
+
 public class GameOverActivity extends AppCompatActivity {
-    //properties dbs
-    public HelperDB helperDB;
-    public SQLiteDatabase db;
+    private FirebaseDatabase database;
+    private DatabaseReference topScoresRef; // A reference to the root or a specific path
 
     public TextView tvPointsGO, tvUserScore, tvAllScores;
     /**
@@ -25,58 +35,50 @@ public class GameOverActivity extends AppCompatActivity {
      * עדכון קישורים לרכיבי המסך
      * קישור למסד נתונים
      */
-    public void init()
-    {
-        tvPointsGO=findViewById(R.id.tvPointsGO);
-        tvUserScore=findViewById(R.id.tvUserScore);
-        tvAllScores=findViewById(R.id.tvAllScores);
-        helperDB=new HelperDB(this);
+    public void init() {
+        tvPointsGO = findViewById(R.id.tvPointsGO);
+        tvUserScore = findViewById(R.id.tvUserScore);
+        tvAllScores = findViewById(R.id.tvAllScores);
+        database = FirebaseDatabase.getInstance();
+        topScoresRef = database.getReference("TopScores");
     }
+
     /**
-     * showAllTopScores
+     * showAllTopScoresFB
      *      פעולה שמביאה מהמסד נתונים את פרטי הכי טובים ומציגה אותם על המשך
      */
-    public void showAllTopScores()
+    public void showAllTopScoresFB()
     {
-        String[] projection = {
-                helperDB.USER_EMAIL_COL,
-                helperDB.POINTS_COL
-        };
-        db = helperDB.getReadableDatabase();
+        Log.d("MARIELA","showAllTopScoresFB");
+        // הוספת מאזין לקריאת הנתונים
+        topScoresRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                Log.d("MARIELA","onDataChange "+dataSnapshot.getKey());
+                tvAllScores.setText("Points email \n");
 
-        Cursor cursor = db.query(
-                helperDB.TOP_SCORES_TABLE,
-                projection,
-                null,
-                null,
-                null,
-                null,
-                "CAST(points AS INTEGER) DESC"
-        );
-        if (cursor.getCount() == 0) {
-            db.close();
-            return;
-        }
-        cursor.moveToFirst();
-        TopScores topScores;
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    Log.d("MARIELA", "Child snapshot key: " + snapshot.getKey());
 
-        String all = "Points email \n";
-        while (!cursor.isAfterLast()) {
+                    TopScores score = snapshot.getValue(TopScores.class);
+                    Log.d("MARIELA","onDataChange "+score.toString());
 
-            String column = helperDB.USER_EMAIL_COL;
-            int indexColumn = cursor.getColumnIndex(column);
-            String email = cursor.getString(indexColumn);
+                    if (score != null) {
+                        Log.d("MARIELA", "Retrieved Score: " + score.toString());
+                        // כאן ניתן להציג את הנתונים למשתמש, למשל ב-RecyclerView או TextView
+                        tvAllScores.setText(tvAllScores.getText()+score.getEmail()+":"+score.getMaxScore()+"\n");
+                    }
+                }
+            }
 
-            column = helperDB.POINTS_COL;
-            indexColumn = cursor.getColumnIndex(column);
-            String score = cursor.getString(indexColumn);
-            topScores = new TopScores(email,score);
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                // טיפול בשגיאה
+                Log.e("FirebaseRead", "Failed to read value.", databaseError.toException());
+                tvAllScores.setText("Failed to read scores \n");
 
-            all+= topScores.getMaxScore()+" "+ topScores.getEmail()+"\n";
-            cursor.moveToNext();
-        }
-        db.close();
-        tvAllScores.setText(all);
+            }
+        });
     }
     /**
      * onCreate
@@ -100,7 +102,7 @@ public class GameOverActivity extends AppCompatActivity {
 
         tvPointsGO.setText(Integer.toString(points));
         tvUserScore.setText(email);
-        showAllTopScores();
+        showAllTopScoresFB();
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
